@@ -207,7 +207,13 @@
 
         async function updateScript() {
             try {
+                // Ensure we have the latest snippets from localStorage
+                loadSnippets();
+                
+                console.log('Updating with snippets:', snippets);
                 const ahkScript = generateAHKScript();
+                console.log('Generated script:', ahkScript);
+                
                 const response = await fetch('http://localhost:8765/update-script', {
                     method: 'POST',
                     headers: {
@@ -223,7 +229,8 @@
                     throw new Error('Helper service error');
                 }
             } catch (error) {
-                showStatus('❌ Helper service not running. Start "start-helper.bat" first.', 'error');
+                console.error('Update error:', error);
+                showStatus('❌ Helper service not running. Start "simple-background.bat" first.', 'error');
             }
         }
 
@@ -297,6 +304,10 @@ OutputDebug("Personal Blaze started successfully!")
                 showStatus(`Snippet /${trigger} added`);
                 document.getElementById('trigger').value = '';
                 document.getElementById('content').value = '';
+                
+                // Debug log
+                console.log('Current snippets:', snippets);
+                console.log('LocalStorage:', localStorage.getItem('personalBlazeSnippets'));
             }
         });
 
