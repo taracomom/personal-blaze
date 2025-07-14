@@ -66,9 +66,6 @@
             <div id="snippets"></div>
         </div>
 
-        <div style="margin-top: 20px;">
-            <button class="export-btn" onclick="updateScript()">🚀 Update & Restart AutoHotkey</button>
-        </div>
 
         <div id="instructions" class="hidden" style="margin-top: 20px;">
             <h3>🔧 Installation Instructions</h3>
@@ -143,12 +140,15 @@
             }
         }
 
-        function deleteSnippet(trigger) {
+        async function deleteSnippet(trigger) {
             if (confirm(`Delete snippet "/${trigger}"?`)) {
                 delete snippets[trigger];
                 saveSnippets();
                 renderSnippets();
-                showStatus(`Snippet /${trigger} deleted`);
+                showStatus(`Deleting /${trigger}...`);
+                
+                // Auto-update AutoHotkey script
+                await updateScript();
             }
         }
 
@@ -292,7 +292,7 @@ OutputDebug("Personal Blaze started successfully!")
             return script;
         }
 
-        document.getElementById('addForm').addEventListener('submit', function(e) {
+        document.getElementById('addForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const trigger = document.getElementById('trigger').value.trim();
             const content = document.getElementById('content').value.trim();
@@ -301,13 +301,12 @@ OutputDebug("Personal Blaze started successfully!")
                 snippets[trigger] = content;
                 saveSnippets();
                 renderSnippets();
-                showStatus(`Snippet /${trigger} added`);
+                showStatus(`Adding /${trigger}...`);
                 document.getElementById('trigger').value = '';
                 document.getElementById('content').value = '';
                 
-                // Debug log
-                console.log('Current snippets:', snippets);
-                console.log('LocalStorage:', localStorage.getItem('personalBlazeSnippets'));
+                // Auto-update AutoHotkey script
+                await updateScript();
             }
         });
 
