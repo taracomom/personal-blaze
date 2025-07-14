@@ -41,10 +41,7 @@
 
         <div class="sync-section">
             <h3>📱 Cloud Sync</h3>
-            <p>Your snippets are automatically saved to localStorage and can be synced across devices.</p>
-            <button class="export-btn" onclick="exportSnippets()">📤 Export Snippets</button>
-            <button class="import-btn" onclick="importSnippets()">📥 Import Snippets</button>
-            <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+            <p>Your snippets are automatically saved to localStorage.</p>
         </div>
 
         <div id="status"></div>
@@ -71,8 +68,6 @@
 
         <div style="margin-top: 20px;">
             <button class="export-btn" onclick="updateScript()">🚀 Update & Restart AutoHotkey</button>
-            <button class="export-btn" onclick="generateAndDownloadScript()">💾 Download Script (Manual)</button>
-            <button class="export-btn" onclick="showInstallInstructions()">📋 Show Installation Instructions</button>
         </div>
 
         <div id="instructions" class="hidden" style="margin-top: 20px;">
@@ -228,7 +223,7 @@
                     throw new Error('Helper service error');
                 }
             } catch (error) {
-                showStatus('❌ Helper service not running. Use manual download instead.', 'error');
+                showStatus('❌ Helper service not running. Start "start-helper.bat" first.', 'error');
             }
         }
 
