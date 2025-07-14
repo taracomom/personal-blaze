@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Personal Blaze - Cloud Snippet Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { border-bottom: 2px solid #007acc; padding-bottom: 10px; margin-bottom: 20px; }
+        .sync-section { background: #e8f4f8; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .add-form { background: #f9f9f9; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        textarea { height: 80px; resize: vertical; }
+        button { background: #007acc; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        button:hover { background: #005a9e; }
+        .snippet-list { margin-top: 20px; }
+        .snippet-item { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-radius: 4px; border-left: 4px solid #007acc; }
+        .snippet-trigger { font-weight: bold; color: #007acc; }
+        .snippet-content { margin: 10px 0; font-family: monospace; background: #eee; padding: 8px; border-radius: 4px; }
+        .snippet-actions { text-align: right; }
+        .delete-btn { background: #dc3545; }
+        .delete-btn:hover { background: #c82333; }
+        .export-btn { background: #28a745; }
+        .export-btn:hover { background: #218838; }
+        .import-btn { background: #ffc107; color: #212529; }
+        .import-btn:hover { background: #e0a800; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .code-block { background: #f8f9fa; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 14px; overflow-x: auto; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Personal Blaze - Cloud Snippet Manager</h1>
+            <p>Manage your text expansion snippets with cloud sync</p>
+        </div>
+
+        <div class="sync-section">
+            <h3>📱 Cloud Sync</h3>
+            <p>Your snippets are automatically saved to localStorage and can be synced across devices.</p>
+            <button class="export-btn" onclick="exportSnippets()">📤 Export Snippets</button>
+            <button class="import-btn" onclick="importSnippets()">📥 Import Snippets</button>
+            <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+        </div>
+
+        <div id="status"></div>
+
+        <div class="add-form">
+            <h3>Add New Snippet</h3>
+            <form id="addForm">
+                <div class="form-group">
+                    <label for="trigger">Trigger (without /)</label>
+                    <input type="text" id="trigger" placeholder="e.g., hello" required>
+                </div>
+                <div class="form-group">
+                    <label for="content">Content</label>
+                    <textarea id="content" placeholder="e.g., Hello! How are you today?" required></textarea>
+                </div>
+                <button type="submit">Add Snippet</button>
+            </form>
+        </div>
+
+        <div class="snippet-list">
+            <h3>Current Snippets</h3>
+            <div id="snippets"></div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button class="export-btn" onclick="generateAndDownloadScript()">💾 Download AutoHotkey Script</button>
+            <button class="export-btn" onclick="showInstallInstructions()">📋 Show Installation Instructions</button>
+        </div>
+
+        <div id="instructions" class="hidden" style="margin-top: 20px;">
+            <h3>🔧 Installation Instructions</h3>
+            <ol>
+                <li>Download the AutoHotkey script using the button above</li>
+                <li>Save it as <code>personal-blaze.ahk</code> in your desired folder</li>
+                <li>Double-click the file to run it</li>
+                <li>For auto-start on Windows boot:
+                    <ul>
+                        <li>Press <code>Win + R</code>, type <code>shell:startup</code>, press Enter</li>
+                        <li>Copy the <code>personal-blaze.ahk</code> file to this folder</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let snippets = {};
+
+        // Load snippets from localStorage on page load
+        function loadSnippets() {
+            const saved = localStorage.getItem('personalBlazeSnippets');
+            if (saved) {
+                snippets = JSON.parse(saved);
+            } else {
+                // Default snippets
+                snippets = {
+                    'hello': 'Hello! How are you today?',
+                    'sig': 'Best regards,\\nYour Name\\nYour Title',
+                    'date': 'DATETIME',
+                    'thanks': 'Thank you for your time!',
+                    'bye': 'Have a great day!',
+                    'yes': 'Yes, that sounds perfect.',
+                    'no': 'No, that will not work for me.',
+                    'addr': '123 Main Street\\nTokyo, Japan 100-0001',
+                    'email': 'your.email@example.com',
+                    'phone': '+81-3-1234-5678',
+                    'meet': 'Let us schedule a meeting.'
+                };
+                saveSnippets();
+            }
+            renderSnippets();
+        }
+
+        // Save snippets to localStorage
+        function saveSnippets() {
+            localStorage.setItem('personalBlazeSnippets', JSON.stringify(snippets));
+        }
+
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => status.innerHTML = '', 3000);
+        }
+
+        function renderSnippets() {
+            const container = document.getElementById('snippets');
+            container.innerHTML = '';
+            
+            for (const [trigger, content] of Object.entries(snippets)) {
+                const div = document.createElement('div');
+                div.className = 'snippet-item';
+                div.innerHTML = `
+                    <div class="snippet-trigger">/${trigger}</div>
+                    <div class="snippet-content">${content.replace(/\\\\n/g, '<br>').replace(/\\n/g, '<br>')}</div>
+                    <div class="snippet-actions">
+                        <button class="delete-btn" onclick="deleteSnippet('${trigger}')">Delete</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function deleteSnippet(trigger) {
+            if (confirm(`Delete snippet "/${trigger}"?`)) {
+                delete snippets[trigger];
+                saveSnippets();
+                renderSnippets();
+                showStatus(`Snippet /${trigger} deleted`);
+            }
+        }
+
+        function exportSnippets() {
+            const data = JSON.stringify(snippets, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'personal-blaze-snippets.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showStatus('Snippets exported successfully!');
+        }
+
+        function importSnippets() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedSnippets = JSON.parse(e.target.result);
+                        if (confirm('This will replace all current snippets. Continue?')) {
+                            snippets = importedSnippets;
+                            saveSnippets();
+                            renderSnippets();
+                            showStatus('Snippets imported successfully!');
+                        }
+                    } catch (error) {
+                        showStatus('Error importing snippets: Invalid JSON file', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function generateAndDownloadScript() {
+            const ahkContent = generateAHKScript();
+            const blob = new Blob([ahkContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'personal-blaze.ahk';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showStatus('AutoHotkey script downloaded!');
+        }
+
+        function showInstallInstructions() {
+            const instructions = document.getElementById('instructions');
+            instructions.classList.toggle('hidden');
+        }
+
+        function generateAHKScript() {
+            let script = `; Personal Blaze - AutoHotkey v2 Text Expander
+; Generated from Personal Blaze Cloud Manager
+; Compatible with AutoHotkey v2
+
+; AutoHotkey v2 directives
+#Requires AutoHotkey v2.0
+#SingleInstance Force
+SendMode("Input")
+SetWorkingDir(A_ScriptDir)
+
+; Show notification
+TrayTip("Text expansion is now active!", "Personal Blaze")
+
+; Text expansions (AutoHotkey v2 syntax)
+`;
+
+            for (const [trigger, content] of Object.entries(snippets)) {
+                if (content === 'DATETIME') {
+                    script += `:*:/${trigger}::\n{\n    Send(FormatTime(, "yyyy/MM/dd HH:mm:ss"))\n}\n\n`;
+                } else {
+                    const ahkContent = content.replace(/\\n/g, '{Enter}').replace(/\\/g, '\\\\').replace(/"/g, '""');
+                    script += `:*:/${trigger}::${ahkContent}\n`;
+                }
+            }
+
+            script += `
+; Exit hotkey (Ctrl+Alt+Q)
+^!q::ExitApp()
+
+; Reload hotkey (Ctrl+Alt+R)
+^!r::Reload()
+
+; Show startup message in console (if run from command line)
+OutputDebug("Personal Blaze started successfully!")
+`;
+
+            return script;
+        }
+
+        document.getElementById('addForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const trigger = document.getElementById('trigger').value.trim();
+            const content = document.getElementById('content').value.trim();
+            
+            if (trigger && content) {
+                snippets[trigger] = content;
+                saveSnippets();
+                renderSnippets();
+                showStatus(`Snippet /${trigger} added`);
+                document.getElementById('trigger').value = '';
+                document.getElementById('content').value = '';
+            }
+        });
+
+        // Initialize
+        loadSnippets();
+    </script>
+</body>
+</html>
