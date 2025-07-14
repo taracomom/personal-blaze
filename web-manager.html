@@ -250,11 +250,24 @@ TrayTip("Text expansion is now active!", "Personal Blaze")
 `;
 
             for (const [trigger, content] of Object.entries(snippets)) {
+                const triggerLength = trigger.length + 1; // +1 for the slash
                 if (content === 'DATETIME') {
-                    script += `:*:/${trigger}::\n{\n    Send(FormatTime(, "yyyy/MM/dd HH:mm:ss"))\n}\n\n`;
+                    script += `:*:/${trigger}::{\n    Send("{Backspace ${triggerLength}}")\n    Sleep(50)\n    SendText(FormatTime(, "yyyy/MM/dd HH:mm:ss"))\n}\n\n`;
                 } else {
-                    const ahkContent = content.replace(/\\n/g, '{Enter}').replace(/\\/g, '\\\\').replace(/"/g, '""');
-                    script += `:*:/${trigger}::${ahkContent}\n`;
+                    const cleanContent = content.replace(/\\\\n/g, '\\n').replace(/\\n/g, '\n');
+                    const lines = cleanContent.split('\n');
+                    script += `:*:/${trigger}::{\n    Send("{Backspace ${triggerLength}}")\n    Sleep(50)\n`;
+                    
+                    lines.forEach((line, index) => {
+                        if (line.trim()) {
+                            script += `    SendText("${line.replace(/"/g, '""')}")\n`;
+                        }
+                        if (index < lines.length - 1) {
+                            script += `    Send("{Enter}")\n`;
+                        }
+                    });
+                    
+                    script += `}\n\n`;
                 }
             }
 
